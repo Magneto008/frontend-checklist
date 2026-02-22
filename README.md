@@ -1,73 +1,87 @@
-# React + TypeScript + Vite
+# Release Checklist UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This repository contains the frontend for the Release Checklist Tool.
+It is a single-page application that allows users to create releases and track their progress using a fixed checklist of steps.
 
-Currently, two official plugins are available:
+The frontend communicates with a deployed backend API using a hardcoded API URL for simplicity.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- Fetch API
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Application Overview
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The application displays a list of software releases and allows the user to:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Create a new release
+- View release details
+- Toggle checklist steps on and off
+- Update additional release notes
+- Delete a release
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Each release has a status (planned, ongoing, done) that is automatically computed by the backend based on the completion state of the checklist steps.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## API Configuration
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+For simplicity and to reduce setup steps, the backend API URL is hardcoded directly in the frontend source code.
+
+API URL used by the application:
+
+https://release-checklist-backend.onrender.com/api/releases
+
+This approach avoids environment variable configuration and keeps the project easy to run and review for the purpose of this assignment.
+
+---
+
+## Running the App Locally
+
+### 1. Install dependencies
+
+npm install
+
+### 2. Start the development server
+
+npm run dev
+
+The application will be available at:
+
+http://localhost:5173
+
+The frontend will connect directly to the deployed backend API.
+
+---
+
+## Application Flow
+
+1. The application fetches all releases from the backend API.
+2. Releases are displayed in a list with their name, date, and status.
+3. Selecting a release opens a detailed view.
+4. Checklist steps can be toggled on or off.
+5. Changes are saved via API calls and reflected immediately in the UI.
+6. The release status updates automatically based on step completion.
+
+---
+
+## Notes
+
+- This is a single-user application by design.
+- No authentication or user management is included.
+- The checklist steps are fixed and shared across all releases.
+- The focus of this project is correctness, clarity, and usability rather than advanced UI design.
+
+---
+
+## Deployment
+
+The frontend can be deployed using platforms such as Vercel or Netlify.
+Since the API URL is hardcoded, no environment variables are required for deployment.
