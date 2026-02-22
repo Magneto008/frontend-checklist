@@ -229,7 +229,7 @@ export default function ReleaseCheckApp() {
                         <td className="p-4 border-r border-gray-200 text-gray-700">
                           {release.due_date}
                         </td>
-                        {/* Prefer backend status if it exists, otherwise calculate it dynamically */}
+
                         <td className="p-4 border-r border-gray-200 text-gray-700">
                           {release.status || getStatus(release.steps)}
                         </td>
