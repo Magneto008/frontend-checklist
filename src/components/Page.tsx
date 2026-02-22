@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Trash2, Plus, Check, ChevronRight } from "lucide-react";
 
 const API_BASE_URL =
   "https://release-checklist-backend.onrender.com/api/releases";
 
+// --- Types ---
 type Release = {
-  id: string;
+  id?: string;
   name: string;
   due_date: string;
-  additional_info: null;
+  additional_info: string | null;
   steps: {
     qa_done: boolean;
     code_freeze: boolean;
@@ -18,28 +19,46 @@ type Release = {
     monitoring_enabled: boolean;
     release_notes_sent: boolean;
   };
-  created_at: string;
-  updated_at: string;
-  status: string;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
 };
 
-const DEFAULT_STEPS: Release = [
-  {
-    id: "pr_merged",
-    label: "All relevant GitHub pull requests have been merged",
-    completed: false,
-  },
-  {
-    id: "changelog",
-    label: "CHANGELOG.md files have been updated",
-    completed: false,
-  },
-  { id: "tests", label: "All tests are passing", completed: false },
-  { id: "gh_release", label: "Releases in Github created", completed: false },
-  { id: "demo_deploy", label: "Deployed in demo", completed: false },
-  { id: "demo_test", label: "Tested thoroughly in demo", completed: false },
-  { id: "prod_deploy", label: "Deployed in production", completed: false },
-];
+type ReleasePost = {
+  name: string;
+  dueDate: string;
+  additionalInfo: string | null;
+  steps: {
+    qa_done: boolean;
+    code_freeze: boolean;
+    tests_passed: boolean;
+    prod_deployed: boolean;
+    staging_deployed: boolean;
+    monitoring_enabled: boolean;
+    release_notes_sent: boolean;
+  };
+};
+
+// UI Mapping for the steps object
+const STEP_LABELS: Record<keyof Release["steps"], string> = {
+  qa_done: "QA has been completed",
+  code_freeze: "Code freeze is active",
+  tests_passed: "All tests are passing",
+  staging_deployed: "Deployed to staging environment",
+  prod_deployed: "Deployed to production environment",
+  monitoring_enabled: "Monitoring and alerts enabled",
+  release_notes_sent: "Release notes sent to stakeholders",
+};
+
+const DEFAULT_STEPS: Release["steps"] = {
+  qa_done: false,
+  code_freeze: false,
+  tests_passed: false,
+  prod_deployed: false,
+  staging_deployed: false,
+  monitoring_enabled: false,
+  release_notes_sent: false,
+};
 
 export default function ReleaseCheckApp() {
   const [releases, setReleases] = useState<Release[]>([]);
@@ -70,15 +89,21 @@ export default function ReleaseCheckApp() {
   }, [currentView]);
 
   const saveRelease = async (release: Release) => {
-    const isNew = !release._id;
-    const url = isNew ? API_BASE_URL : `${API_BASE_URL}/${release._id}`;
+    const payload: ReleasePost = {
+      name: release.name,
+      dueDate: release.due_date,
+      additionalInfo: release.additional_info,
+      steps: release.steps,
+    };
+    const isNew = !release.id;
+    const url = isNew ? API_BASE_URL : `${API_BASE_URL}/${release.id}`;
     const method = isNew ? "POST" : "PUT";
 
     try {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(release),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         setCurrentView("list");
@@ -89,7 +114,8 @@ export default function ReleaseCheckApp() {
   };
 
   const deleteRelease = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this release?")) return;
+    if (!window.confirm("Are you sure you want to delete this release?"))
+      return;
     try {
       const response = await fetch(`${API_BASE_URL}/${id}`, {
         method: "DELETE",
@@ -107,27 +133,29 @@ export default function ReleaseCheckApp() {
   };
 
   // --- Helper Functions ---
-  const getStatus = (steps: Step[] = []) => {
-    if (!steps || steps.length === 0) return "Planned";
-    const completedCount = steps.filter((s) => s.completed).length;
+  const getStatus = (steps: Release["steps"]) => {
+    if (!steps) return "Planned";
+    const stepValues = Object.values(steps);
+    const completedCount = stepValues.filter(Boolean).length;
+
     if (completedCount === 0) return "Planned";
-    if (completedCount === steps.length) return "Done";
+    if (completedCount === stepValues.length) return "Done";
     return "Ongoing";
   };
 
   const handleNewRelease = () => {
     setActiveRelease({
       name: "",
-      dueDate: new Date().toISOString().split("T")[0], // YYYY-MM-DD
-      remarks: "",
-      steps: [...DEFAULT_STEPS],
+      due_date: new Date().toISOString().split("T")[0], // YYYY-MM-DD
+      additional_info: "",
+      steps: { ...DEFAULT_STEPS },
     });
     setCurrentView("detail");
   };
 
   const handleViewRelease = (release: Release) => {
-    // Ensure legacy data has steps mapped correctly
-    const steps = release.steps?.length ? release.steps : [...DEFAULT_STEPS];
+    // Ensure all steps exist in case of legacy data missing keys
+    const steps = { ...DEFAULT_STEPS, ...(release.steps || {}) };
     setActiveRelease({ ...release, steps });
     setCurrentView("detail");
   };
@@ -192,17 +220,18 @@ export default function ReleaseCheckApp() {
                   ) : (
                     releases.map((release, idx) => (
                       <tr
-                        key={release._id || idx}
+                        key={release.id || idx}
                         className="border-b border-gray-200 hover:bg-slate-50"
                       >
                         <td className="p-4 border-r border-gray-200 text-gray-700">
                           {release.name}
                         </td>
                         <td className="p-4 border-r border-gray-200 text-gray-700">
-                          {release.dueDate}
+                          {release.due_date}
                         </td>
+                        {/* Prefer backend status if it exists, otherwise calculate it dynamically */}
                         <td className="p-4 border-r border-gray-200 text-gray-700">
-                          {getStatus(release.steps)}
+                          {release.status || getStatus(release.steps)}
                         </td>
                         <td className="p-4 border-r border-gray-200 text-center">
                           <button
@@ -215,9 +244,10 @@ export default function ReleaseCheckApp() {
                         <td className="p-4 text-center">
                           <button
                             onClick={() =>
-                              release._id && deleteRelease(release._id)
+                              release.id && deleteRelease(release.id)
                             }
-                            className="text-gray-600 hover:text-red-600 flex items-center justify-center w-full gap-2"
+                            className="text-gray-600 hover:text-red-600 flex items-center justify-center w-full gap-2 disabled:opacity-50"
+                            disabled={!release.id}
                           >
                             Delete <Trash2 size={18} />
                           </button>
@@ -246,9 +276,9 @@ export default function ReleaseCheckApp() {
                   {activeRelease.name || "New Release"}
                 </span>
               </div>
-              {activeRelease._id && (
+              {activeRelease.id && (
                 <button
-                  onClick={() => deleteRelease(activeRelease._id!)}
+                  onClick={() => deleteRelease(activeRelease.id!)}
                   className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded flex items-center gap-2 text-sm font-medium transition-colors"
                 >
                   Delete <Trash2 size={16} />
@@ -280,12 +310,12 @@ export default function ReleaseCheckApp() {
                     Date
                   </label>
                   <input
-                    type="text" // Using text to match placeholder style in mockup, or use type="date"
-                    value={activeRelease.dueDate}
+                    type="text"
+                    value={activeRelease.due_date}
                     onChange={(e) =>
                       setActiveRelease({
                         ...activeRelease,
-                        dueDate: e.target.value,
+                        due_date: e.target.value,
                       })
                     }
                     placeholder="September 20, 2022"
@@ -295,22 +325,30 @@ export default function ReleaseCheckApp() {
               </div>
 
               <div className="space-y-3 mb-10">
-                {activeRelease.steps.map((step, index) => (
+                {(
+                  Object.keys(STEP_LABELS) as Array<keyof Release["steps"]>
+                ).map((stepKey) => (
                   <label
-                    key={step.id}
+                    key={stepKey}
                     className="flex items-center gap-3 cursor-pointer group"
                   >
                     <input
                       type="checkbox"
-                      checked={step.completed}
+                      checked={activeRelease.steps[stepKey] || false}
                       onChange={(e) => {
-                        const newSteps = [...activeRelease.steps];
-                        newSteps[index].completed = e.target.checked;
-                        setActiveRelease({ ...activeRelease, steps: newSteps });
+                        setActiveRelease({
+                          ...activeRelease,
+                          steps: {
+                            ...activeRelease.steps,
+                            [stepKey]: e.target.checked,
+                          },
+                        });
                       }}
                       className="w-4 h-4 text-indigo-500 border-gray-300 rounded focus:ring-indigo-500"
                     />
-                    <span className="text-gray-700">{step.label}</span>
+                    <span className="text-gray-700">
+                      {STEP_LABELS[stepKey]}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -320,11 +358,11 @@ export default function ReleaseCheckApp() {
                   Additional remarks / tasks
                 </label>
                 <textarea
-                  value={activeRelease.remarks || ""}
+                  value={activeRelease.additional_info || ""}
                   onChange={(e) =>
                     setActiveRelease({
                       ...activeRelease,
-                      remarks: e.target.value,
+                      additional_info: e.target.value,
                     })
                   }
                   placeholder="Please enter any other important notes for the release"
